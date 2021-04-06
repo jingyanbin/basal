@@ -1,4 +1,4 @@
-package base
+package basal
 
 import (
 	"strconv"
@@ -18,7 +18,7 @@ func (buf *Buffer) AppendString(s string) {
 	*buf = append(*buf, s...)
 }
 
-func (buf *Buffer) AppendStrings(ss ... string) {
+func (buf *Buffer) AppendStrings(ss ...string) {
 	for _, s := range ss {
 		*buf = append(*buf, s...)
 	}

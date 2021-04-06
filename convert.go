@@ -1,4 +1,4 @@
-package base
+package basal
 
 import (
 	"encoding/json"
@@ -23,7 +23,7 @@ func IsUTF8(buf []byte) bool {
 				}
 				nBytes-- //减掉首字节的一个计数
 			}
-		} else { //处理多字节字符
+		} else {                     //处理多字节字符
 			if buf[i]&0xc0 != 0x80 { //判断多字节后面的字节是否是10开头
 				return false
 			}

@@ -1,4 +1,4 @@
-package base
+package basal
 
 import (
 	"sync"
@@ -53,7 +53,6 @@ func (pools *bufferPools) Free(buf *Buffer) {
 }
 
 var buffersMgr bufferPools
-
 
 func init() {
 	buffersMgr.Init()

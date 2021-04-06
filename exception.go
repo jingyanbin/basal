@@ -1,4 +1,4 @@
-package base
+package basal
 
 import (
 	"regexp"
@@ -114,7 +114,7 @@ func exception(catch func(e error)) {
 
 func Exception(catch func(stack string, e error)) {
 	if err := recover(); err != nil {
-		if catch == nil{
+		if catch == nil {
 			return
 		}
 		info := debug.Stack()

@@ -1,4 +1,4 @@
-package base
+package basal
 
 const smalls = "00010203040506070809" +
 	"10111213141516171819" +
