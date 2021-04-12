@@ -129,7 +129,7 @@ func Exception(catch func(stack string, e error)) {
 	}
 }
 
-func Try(f func(), Catch func(stack string, e error)) {
-	defer Exception(Catch)
+func Try(f func(), catch func(stack string, e error)) {
+	defer Exception(catch)
 	f()
 }
