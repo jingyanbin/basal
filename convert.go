@@ -1,6 +1,8 @@
 package basal
 
 import (
+	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -37,7 +39,15 @@ func Type(value interface{}) reflect.Type {
 	return reflect.TypeOf(value)
 }
 
-func ToString(value interface{}) (string, error) {
+func IsNilPointer(value interface{}) (bool, reflect.Type) {
+	vi := reflect.ValueOf(value)
+	if vi.Kind() == reflect.Ptr {
+		return vi.IsNil(), vi.Type()
+	}
+	return false, vi.Type()
+}
+
+func ToString(value interface{}, indent bool) (string, error) {
 	switch v := value.(type) {
 	case string:
 		return v, nil
@@ -63,9 +73,43 @@ func ToString(value interface{}) (string, error) {
 	case []byte:
 		return string(v), nil
 	default:
-		return fmt.Sprintf("%v", v), nil
+		vi := reflect.ValueOf(value)
+		kd := vi.Kind()
+		switch kd {
+		case reflect.Struct:
+			b, err := json.Marshal(vi.Interface())
+			if err != nil {
+				return "", err
+			}
+			if indent {
+				var out bytes.Buffer
+				err = json.Indent(&out, b, "", "    ")
+				if err != nil {
+					return string(b), nil
+				}
+				return out.String(), nil
+			} else {
+				return string(b), nil
+			}
+		case reflect.Ptr:
+			if vi.IsNil() {
+				return fmt.Sprintf("<nil %v>", vi.Type()), nil
+			}
+			kd2 := vi.Elem().Kind()
+			switch kd2 {
+			case reflect.Struct:
+				b, err := json.Marshal(vi.Elem().Interface())
+				if err != nil {
+					return "", err
+				}
+				return string(b), nil
+			default:
+				return "", NewError("ToString value ptr type error: %v", vi.Type())
+			}
+		default:
+			return "", NewError("ToString value type error: %v", vi.Type())
+		}
 	}
-	return "", NewError("ToString value type error: %v", Type(value))
 }
 
 func ToFloat64(value interface{}) (float64, error) {
@@ -93,7 +137,7 @@ func ToFloat64(value interface{}) (float64, error) {
 	case float32:
 		return float64(v), nil
 	case float64:
-		return float64(v), nil
+		return v, nil
 	case string:
 		return strconv.ParseFloat(v, 64)
 	case []byte:
@@ -133,7 +177,7 @@ func ToInt64(value interface{}) (int64, error) {
 	case int32:
 		return int64(n), nil
 	case int64:
-		return int64(n), nil
+		return n, nil
 	case uint:
 		return int64(n), nil
 	case uint8:
@@ -324,9 +368,14 @@ func Uint(value interface{}) (uint, error) {
 //const INT64_MAX  = int64(^uint64(0)>>1)
 
 const UINT32_MIN uint32 = 0
-const UINT32_MAX uint32 = ^UINT32_MIN
+const UINT32_MAX = ^UINT32_MIN
 const INT32_MIN = ^UINT32_MAX
 const INT32_MAX = int32(^uint32(0) >> 1)
+
+const UINT16_MIN uint16 = 0
+const UINT16_MAX = ^UINT16_MIN
+const INT16_MIN = ^UINT16_MAX
+const INT16_MAX = int16(UINT16_MAX >> 1)
 
 func AtoInt64(s string) (x int64, err error) {
 	neg := false
@@ -395,4 +444,14 @@ func AbsFloat64(n float64) float64 {
 func Round(value float64, digit int) float64 {
 	p10 := math.Pow10(digit)
 	return math.Trunc((value+0.5/p10)*p10) / p10
+}
+
+func Unt32ToBytes(n uint32) []byte {
+	buf := make([]byte, 4)
+	binary.BigEndian.PutUint32(buf, n)
+	return buf
+}
+
+func BytesToUnt32(b []byte) uint32 {
+	return binary.BigEndian.Uint32(b)
 }

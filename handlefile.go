@@ -2,7 +2,9 @@ package basal
 
 import (
 	"os"
+	"path"
 	"path/filepath"
+	"runtime"
 )
 
 //打开文件 自动创建目录
@@ -171,6 +173,14 @@ func ExecDir() string {
 		return dir
 	} else {
 		return execDir
+	}
+}
+
+func PathBase(p string) string {
+	if runtime.GOOS == "windows" {
+		return path.Base(filepath.ToSlash(p))
+	} else {
+		return path.Base(p)
 	}
 }
 

@@ -16,7 +16,7 @@ type Json struct {
 }
 
 func (my *Json) String() string {
-	s, _ := my.ToString()
+	s, _ := my.ToString(false)
 	return s
 }
 
@@ -28,8 +28,8 @@ func (my *Json) GetJson(keys ...interface{}) *Json {
 	return &Json{my.Get(keys...)}
 }
 
-func (my *Json) ToString() (string, error) {
-	return ToString(my.data)
+func (my *Json) ToString(indent bool) (string, error) {
+	return ToString(my.data, indent)
 }
 
 func (my *Json) ToInt64() (int64, error) {
@@ -262,7 +262,7 @@ func (my *Json) set(root interface{}, args []interface{}) (interface{}, error) {
 	return nil, NewError("json set type error: args=%v", args)
 }
 
-func (my *Json) Set(args ... interface{}) error {
+func (my *Json) Set(args ...interface{}) error {
 	if my.data == nil {
 		value, err := my.create(args)
 		if err != nil {
@@ -334,7 +334,7 @@ func (my *Json) delete(root interface{}, keys []interface{}) (interface{}, bool,
 	return nil, false, false
 }
 
-func (my *Json) Delete(keys ... interface{}) bool {
+func (my *Json) Delete(keys ...interface{}) bool {
 	if my.data != nil {
 		value, success, _ := my.delete(&my.data, keys)
 		if value != nil {
@@ -413,4 +413,19 @@ func linkJson(js interface{}) (*Json, error) {
 		return &Json{v}, nil
 	}
 	return nil, NewError("link json type error: %v", Type(js))
+}
+
+func LoadJsonFileToStruct(filename string, v interface{}) error {
+	if isNil, typ := IsNilPointer(v); isNil {
+		return NewError("LoadJsonFileToStruct IsNilPointer: %s", typ)
+	}
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(data, v)
+	if err != nil {
+		return err
+	}
+	return nil
 }
