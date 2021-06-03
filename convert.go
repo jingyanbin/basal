@@ -2,7 +2,6 @@ package basal
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -446,12 +445,5 @@ func Round(value float64, digit int) float64 {
 	return math.Trunc((value+0.5/p10)*p10) / p10
 }
 
-func Unt32ToBytes(n uint32) []byte {
-	buf := make([]byte, 4)
-	binary.BigEndian.PutUint32(buf, n)
-	return buf
-}
 
-func BytesToUnt32(b []byte) uint32 {
-	return binary.BigEndian.Uint32(b)
-}
+
