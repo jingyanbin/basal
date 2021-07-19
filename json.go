@@ -1,6 +1,7 @@
 package basal
 
 import (
+	"bytes"
 	"encoding/json"
 	"io/ioutil"
 	"os"
@@ -400,11 +401,19 @@ func NewJson(js interface{}) (*Json, error) {
 
 func loadJson(v []byte) (*Json, error) {
 	js := &Json{}
-	err := json.Unmarshal(v, &js.data)
-	if err != nil {
+	decoder := json.NewDecoder(bytes.NewBuffer(v))
+	decoder.UseNumber()
+	err := decoder.Decode(&js.data)
+	if err != nil{
 		return nil, err
 	}
 	return js, nil
+
+	//err := json.Unmarshal(v, &js.data)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//return js, nil
 }
 
 func linkJson(js interface{}) (*Json, error) {

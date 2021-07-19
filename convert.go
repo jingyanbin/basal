@@ -101,7 +101,16 @@ func ToString(value interface{}, indent bool) (string, error) {
 				if err != nil {
 					return "", err
 				}
-				return string(b), nil
+				if indent {
+					var out bytes.Buffer
+					err = json.Indent(&out, b, "", "    ")
+					if err != nil {
+						return string(b), nil
+					}
+					return out.String(), nil
+				} else {
+					return string(b), nil
+				}
 			default:
 				return "", NewError("ToString value ptr type error: %v", vi.Type())
 			}
@@ -376,6 +385,8 @@ const UINT16_MAX = ^UINT16_MIN
 const INT16_MIN = ^UINT16_MAX
 const INT16_MAX = int16(UINT16_MAX >> 1)
 
+const overfolw63div10 = (1<<63 - 1) / 10
+
 func AtoInt64(s string) (x int64, err error) {
 	neg := false
 	if s == "" {
@@ -395,7 +406,7 @@ func AtoInt64(s string) (x int64, err error) {
 		if c < '0' || c > '9' {
 			break
 		}
-		if x > (1<<63-1)/10 {
+		if x > overfolw63div10 {
 			// overflow
 			return 0, NewError("param error: overflow %v", s)
 		}
@@ -426,6 +437,18 @@ func AbsInt32(n int32) int32 {
 	return (n ^ y) - y
 }
 
+func AbsInt16(n int16) int16 {
+	y := n >> 15
+	return (n ^ y) - y
+}
+
+func AbsInt(n int) int {
+	if n < 0 {
+		return -n
+	}
+	return n
+}
+
 func AbsFloat32(n float32) float32 {
 	if n < 0 {
 		return -n
@@ -444,6 +467,3 @@ func Round(value float64, digit int) float64 {
 	p10 := math.Pow10(digit)
 	return math.Trunc((value+0.5/p10)*p10) / p10
 }
-
-
-

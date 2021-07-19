@@ -145,38 +145,35 @@ func OpenHandleFile(folderPath string, fileName string, flag int, perm os.FileMo
 	return hf, nil
 }
 
-var programDir string
-var execDir string
+type fpath struct {
+	programDir string
+	execDir    string
+}
 
-//程序所在路径
-func ProgramDir() string {
-	if programDir == "" {
-		dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-		if err != nil {
-			panic(err)
-		}
-		programDir = dir
-		return dir
-	} else {
-		return programDir
+func (m *fpath) init() {
+	var err error
+	m.programDir, err = filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		panic(err)
+	}
+	m.execDir, err = os.Getwd()
+	if err != nil {
+		panic(err)
 	}
 }
 
-//程序执行路径
-func ExecDir() string {
-	if execDir == "" {
-		dir, err := os.Getwd()
-		if err != nil {
-			panic(err)
-		}
-		execDir = dir
-		return dir
-	} else {
-		return execDir
-	}
+//程序路径
+func (m *fpath) ProgramDir() string {
+	return m.programDir
 }
 
-func PathBase(p string) string {
+//执行路径
+func (m *fpath) ExecDir() string {
+	return m.execDir
+}
+
+//文件名
+func (m *fpath) Base(p string) string {
 	if runtime.GOOS == "windows" {
 		return path.Base(filepath.ToSlash(p))
 	} else {
@@ -184,7 +181,29 @@ func PathBase(p string) string {
 	}
 }
 
+//程序路径组合
+func (m *fpath) ProgramDirJoin(elem ...string) string {
+	var elems = make([]string, len(elem)+1)
+	elems[0] = m.programDir
+	copy(elems[1:], elem)
+	return filepath.Join(elems...)
+}
+
+//执行路径组合
+func (m *fpath) ExecDirJoin(elem ...string) string {
+	var elems = make([]string, len(elem)+1)
+	elems[0] = m.execDir
+	copy(elems[1:], elem)
+	return filepath.Join(elems...)
+}
+
+//获得路径最后的文件、文件件所在目录
+func (m *fpath) Dir(p string) string {
+	return filepath.Dir(p)
+}
+
+var Path = &fpath{}
+
 func init() {
-	ProgramDir()
-	ExecDir()
+	Path.init()
 }
