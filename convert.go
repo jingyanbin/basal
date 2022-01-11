@@ -7,6 +7,8 @@ import (
 	"math"
 	"reflect"
 	"strconv"
+	"sync"
+	"sync/atomic"
 )
 
 func IsUTF8(buf []byte) bool {
@@ -46,6 +48,14 @@ func IsNilPointer(value interface{}) (bool, reflect.Type) {
 	return false, vi.Type()
 }
 
+func IsPointer(value interface{}) bool {
+	vi := reflect.ValueOf(value)
+	if vi.Kind() == reflect.Ptr {
+		return true
+	}
+	return false
+}
+
 func ToString(value interface{}, indent bool) (string, error) {
 	switch v := value.(type) {
 	case string:
@@ -70,6 +80,8 @@ func ToString(value interface{}, indent bool) (string, error) {
 		b, err := json.Marshal(v)
 		return string(b), err
 	case []byte:
+		return string(v), nil
+	case json.Number:
 		return string(v), nil
 	default:
 		vi := reflect.ValueOf(value)
@@ -150,6 +162,8 @@ func ToFloat64(value interface{}) (float64, error) {
 		return strconv.ParseFloat(v, 64)
 	case []byte:
 		return strconv.ParseFloat(string(v), 64)
+	case json.Number:
+		return v.Float64()
 	default:
 		switch value := reflect.ValueOf(v); value.Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
@@ -208,6 +222,8 @@ func ToInt64(value interface{}) (int64, error) {
 		f, err := strconv.ParseFloat(string(n), 64)
 		return int64(f), err
 		//return strconv.ParseInt(string(n), 10, 64)
+	case json.Number:
+		return n.Int64()
 	default:
 		switch value := reflect.ValueOf(n); value.Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
@@ -272,102 +288,6 @@ func ToUint8(value interface{}) (uint8, error) {
 func ToUint(value interface{}) (uint, error) {
 	v, err := ToInt64(value)
 	return uint(v), err
-}
-
-func Float64(value interface{}) (float64, error) {
-	v, ok := value.(float64)
-	if !ok {
-		return 0, NewError("Float64 value type error: %v", Type(value))
-	}
-	return v, nil
-}
-
-func Float32(value interface{}) (float32, error) {
-	v, ok := value.(float32)
-	if !ok {
-		return 0, NewError("Float32 value type error: %v", Type(value))
-	}
-	return v, nil
-}
-
-func Int64(value interface{}) (int64, error) {
-	v, ok := value.(int64)
-	if !ok {
-		return 0, NewError("Int64 value type error: %v", Type(value))
-	}
-	return v, nil
-}
-
-func Uint64(value interface{}) (uint64, error) {
-	v, ok := value.(uint64)
-	if !ok {
-		return 0, NewError("Uint64 value type error: %v", Type(value))
-	}
-	return v, nil
-}
-
-func Int32(value interface{}) (int32, error) {
-	v, ok := value.(int32)
-	if !ok {
-		return 0, NewError("Int32 value type error: %v", Type(value))
-	}
-	return v, nil
-}
-
-func Uint32(value interface{}) (uint32, error) {
-	v, ok := value.(uint32)
-	if !ok {
-		return 0, NewError("Uint32 value type error: %v", Type(value))
-	}
-	return v, nil
-}
-
-func Int16(value interface{}) (int16, error) {
-	v, ok := value.(int16)
-	if !ok {
-		return 0, NewError("Int16 value type error: %v", Type(value))
-	}
-	return v, nil
-}
-
-func Uint16(value interface{}) (uint16, error) {
-	v, ok := value.(uint16)
-	if !ok {
-		return 0, NewError("Uint16 value type error: %v", Type(value))
-	}
-	return v, nil
-}
-
-func Int8(value interface{}) (int8, error) {
-	v, ok := value.(int8)
-	if !ok {
-		return 0, NewError("Int8 value type error: %v", Type(value))
-	}
-	return v, nil
-}
-
-func Uint8(value interface{}) (uint8, error) {
-	v, ok := value.(uint8)
-	if !ok {
-		return 0, NewError("Uint8 value type error: %v", Type(value))
-	}
-	return v, nil
-}
-
-func Int(value interface{}) (int, error) {
-	v, ok := value.(int)
-	if !ok {
-		return 0, NewError("Int value type error: %v", Type(value))
-	}
-	return v, nil
-}
-
-func Uint(value interface{}) (uint, error) {
-	v, ok := value.(uint)
-	if !ok {
-		return 0, NewError("Uint value type error: %v", Type(value))
-	}
-	return v, nil
 }
 
 //const UINT64_MIN uint64 = 0
@@ -466,4 +386,46 @@ func AbsFloat64(n float64) float64 {
 func Round(value float64, digit int) float64 {
 	p10 := math.Pow10(digit)
 	return math.Trunc((value+0.5/p10)*p10) / p10
+}
+
+func AddRemainInt64(oldNum, addNum, numMax int64) (newNum int64, added int64, remained int64) {
+	if addNum < 0 {
+		return oldNum, 0, 0
+	}
+	cha := numMax - oldNum
+	remained = addNum - cha
+	if remained > 0 {
+		return numMax, addNum - remained, remained
+	}
+	return oldNum + addNum, addNum, 0
+}
+
+func AddRemainInt32(oldNum, addNum, numMax int32) (newNum int32, added int32, remained int32) {
+	if addNum < 0 {
+		return oldNum, 0, 0
+	}
+	cha := numMax - oldNum
+	remained = addNum - cha
+	if remained > 0 {
+		return numMax, addNum - remained, remained
+	}
+	return oldNum + addNum, addNum, 0
+}
+
+type OnceSuccess struct {
+	m    sync.Mutex
+	done uint32
+}
+
+func (once *OnceSuccess) Do(f func() bool) {
+	if atomic.LoadUint32(&once.done) == 1 {
+		return
+	}
+	once.m.Lock()
+	defer once.m.Unlock()
+	if once.done == 0 {
+		if f() {
+			atomic.StoreUint32(&once.done, 1)
+		}
+	}
 }

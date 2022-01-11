@@ -42,6 +42,8 @@ func (my *LRUCache) Set(key interface{}, value interface{}) {
 		my.list.MoveToFront(elem)
 		elem.Value = &pair{k: key, v: value}
 	} else {
+		elemNew := my.list.PushFront(&pair{k: key, v: value})
+		my.cache[key] = elemNew
 		if my.list.Len() >= my.size {
 			back := my.list.Back()
 			if back != nil {
@@ -49,8 +51,6 @@ func (my *LRUCache) Set(key interface{}, value interface{}) {
 				my.list.Remove(back)
 			}
 		}
-		elemNew := my.list.PushFront(&pair{k: key, v: value})
-		my.cache[key] = elemNew
 	}
 }
 
@@ -64,9 +64,19 @@ func (my *LRUCache) Remove(key interface{}) {
 }
 
 func (my *LRUCache) Len() int {
+	my.mutex.Lock()
+	defer my.mutex.Unlock()
 	return my.list.Len()
 }
 
 func (my *LRUCache) Size() int {
+	my.mutex.Lock()
+	defer my.mutex.Unlock()
 	return my.size
+}
+
+func (my *LRUCache) SetSize(size int) {
+	my.mutex.Lock()
+	defer my.mutex.Unlock()
+	my.size = size
 }

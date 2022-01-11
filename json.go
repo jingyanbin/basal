@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
+	"math"
 	"os"
 )
 
@@ -23,10 +24,6 @@ func (my *Json) String() string {
 
 func (my *Json) IsNil() bool {
 	return my.data == nil
-}
-
-func (my *Json) GetJson(keys ...interface{}) *Json {
-	return &Json{my.Get(keys...)}
 }
 
 func (my *Json) ToString(indent bool) (string, error) {
@@ -49,29 +46,53 @@ func (my *Json) ToFloat32() (float32, error) {
 	return ToFloat32(my.data)
 }
 
-func (my *Json) Float64() (v float64, ok bool) {
-	v, ok = my.data.(float64)
-	return
+func (my *Json) Float64() (float64, bool) {
+	if number, ok := my.data.(json.Number); ok {
+		v, err := number.Float64()
+		if err != nil {
+			return 0, false
+		}
+		return v, true
+	}
+	return 0, false
 }
 
-func (my *Json) Float32() (v float32, ok bool) {
-	v, ok = my.data.(float32)
-	return
+func (my *Json) Float32() (float32, bool) {
+	if v, ok := my.Float64(); ok {
+		if v > math.MaxFloat32 || v < -math.MaxFloat32 {
+			return 0, false
+		}
+		return float32(v), true
+	}
+	return 0, false
 }
 
-func (my *Json) Int64() (v int64, ok bool) {
-	v, ok = my.data.(int64)
-	return
+func (my *Json) Int64() (int64, bool) {
+	if number, ok := my.data.(json.Number); ok {
+		v, err := number.Int64()
+		if err != nil {
+			return 0, false
+		}
+		return v, true
+	}
+	return 0, false
 }
 
-func (my *Json) Int32() (v int32, ok bool) {
-	v, ok = my.data.(int32)
-	return
+func (my *Json) Int32() (int32, bool) {
+	if v, ok := my.Int64(); ok {
+		if v > math.MaxInt32 || v < math.MinInt32 {
+			return 0, false
+		}
+		return int32(v), true
+	}
+	return 0, false
 }
 
-func (my *Json) Int() (v int, ok bool) {
-	v, ok = my.data.(int)
-	return
+func (my *Json) Int() (int, bool) {
+	if v, ok := my.Int64(); ok {
+		return int(v), true
+	}
+	return 0, false
 }
 
 func (my *Json) Bool() (v bool, ok bool) {
@@ -104,13 +125,8 @@ func (my *Json) Bytes() ([]byte, error) {
 	return json.Marshal(my.data)
 }
 
-func (my *Json) Loads(js interface{}) error {
-	obj, err := NewJson(js)
-	if err != nil {
-		return err
-	}
-	my.data = obj.data
-	return nil
+func (my *Json) GetJson(keys ...interface{}) *Json {
+	return &Json{my.Get(keys...)}
 }
 
 func (my *Json) Get(keys ...interface{}) interface{} {
@@ -131,6 +147,15 @@ func (my *Json) Get(keys ...interface{}) interface{} {
 		}
 	}
 	return v
+}
+
+func (my *Json) Loads(js interface{}) error {
+	obj, err := NewJson(js)
+	if err != nil {
+		return err
+	}
+	my.data = obj.data
+	return nil
 }
 
 func (my *Json) create(keys []interface{}) (interface{}, error) {
@@ -404,16 +429,10 @@ func loadJson(v []byte) (*Json, error) {
 	decoder := json.NewDecoder(bytes.NewBuffer(v))
 	decoder.UseNumber()
 	err := decoder.Decode(&js.data)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	return js, nil
-
-	//err := json.Unmarshal(v, &js.data)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//return js, nil
 }
 
 func linkJson(js interface{}) (*Json, error) {
@@ -424,17 +443,27 @@ func linkJson(js interface{}) (*Json, error) {
 	return nil, NewError("link json type error: %v", Type(js))
 }
 
-func LoadJsonFileToStruct(filename string, v interface{}) error {
-	if isNil, typ := IsNilPointer(v); isNil {
-		return NewError("LoadJsonFileToStruct IsNilPointer: %s", typ)
-	}
-	data, err := ioutil.ReadFile(filename)
+func LoadJsonFileTo(jsFileName string, toPtr interface{}) error {
+	//if isNil, typ := IsNilPointer(v); isNil {
+	//	return NewError("LoadJsonFileTo IsNilPointer: %s", typ)
+	//}
+	data, err := ioutil.ReadFile(jsFileName)
 	if err != nil {
 		return err
 	}
-	err = json.Unmarshal(data, v)
+	return LoadJsonBytesTo(data, toPtr)
+}
+
+func LoadJsonBytesTo(js []byte, toPtr interface{}) error {
+	dec := json.NewDecoder(bytes.NewBuffer(js))
+	dec.UseNumber()
+	err := dec.Decode(toPtr)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func LoadJsonStringTo(js string, toPtr interface{}) error {
+	return LoadJsonBytesTo([]byte(js), toPtr)
 }

@@ -25,6 +25,9 @@ func OpenFile(folderPath string, fileName string, flag int, perm os.FileMode) (f
 			file, err = os.OpenFile(path, flag, perm)
 		}
 	}
+	if !IsExistBy(file, err) {
+		err = os.ErrNotExist
+	}
 	return
 }
 
@@ -32,6 +35,14 @@ func OpenFile(folderPath string, fileName string, flag int, perm os.FileMode) (f
 func OpenFileB(filePath string, flag int, perm os.FileMode) (file *os.File, err error) {
 	folderPath, fileName := filepath.Split(filePath)
 	return OpenFile(folderPath, fileName, flag, perm)
+}
+
+//文件是否存在
+func IsExistBy(f *os.File, err error) bool {
+	if f == nil || os.IsNotExist(err) {
+		return false
+	}
+	return true
 }
 
 //文件或文件夹是否存在
@@ -54,6 +65,22 @@ func IsExistFolder(path string) (bool, error) {
 			return true, nil
 		} else {
 			return false, NewError("not is folder: %s", path)
+		}
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
+}
+
+// 文件是否存在
+func IsExistFile(path string) (bool, error) {
+	handle, err := os.Stat(path)
+	if err == nil {
+		if handle.IsDir() {
+			return false, NewError("not is file: %s", path)
+		} else {
+			return true, nil
 		}
 	}
 	if os.IsNotExist(err) {
