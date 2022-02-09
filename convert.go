@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"sync"
 	"sync/atomic"
+	"unsafe"
 )
 
 func IsUTF8(buf []byte) bool {
@@ -51,6 +52,39 @@ func IsNilPointer(value interface{}) (bool, reflect.Type) {
 func IsPointer(value interface{}) bool {
 	vi := reflect.ValueOf(value)
 	if vi.Kind() == reflect.Ptr {
+		return true
+	}
+	return false
+}
+
+func SamePointer(pointers ...unsafe.Pointer) bool {
+	if len(pointers) > 1 {
+		p0 := *(*int)(pointers[0])
+		for _, p := range pointers[1:] {
+			if p0 != *(*int)(p) {
+				return false
+			}
+		}
+		return true
+	}
+	return false
+}
+
+func SamePtr(ptrs ...interface{}) bool {
+	if len(ptrs) > 1 {
+		vi0 := reflect.ValueOf(ptrs[0])
+		if vi0.Kind() != reflect.Ptr {
+			return false
+		}
+		for _, p := range ptrs[1:] {
+			vix := reflect.ValueOf(p)
+			if vix.Kind() != reflect.Ptr {
+				return false
+			}
+			if vix.Pointer() != vi0.Pointer() {
+				return false
+			}
+		}
 		return true
 	}
 	return false
