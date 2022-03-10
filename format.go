@@ -67,6 +67,11 @@ func (m *Formatter) Format(format string, kws KwArgs) string {
 	return string(formatBytes([]byte(format), m.signByte, m.startByte, m.endByte, kws, m.ignore))
 }
 
+//新建格式器
+//signByte标志字符
+//startByte 开始字符
+//endByte 结束字符
+//ignore: true 忽略非完整格式, false 不忽略出现非完整格式后panic
 func NewFormatter(signByte, startByte, endByte byte, ignore bool) *Formatter {
 	return &Formatter{signByte: signByte, startByte: startByte, endByte: endByte, ignore: ignore}
 }

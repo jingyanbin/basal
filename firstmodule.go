@@ -3,7 +3,6 @@ package basal
 import (
 	"reflect"
 	"runtime"
-	"strings"
 	"unsafe"
 )
 
@@ -79,13 +78,13 @@ type moduledata struct {
 	next *moduledata
 }
 
-//go:linkname firstmoduledata runtime.firstmoduledata
+////go:linkname firstmoduledata runtime.firstmoduledata
 var firstmoduledata moduledata
 
-//go:linkname lastmoduledatap runtime.lastmoduledatap
+////go:linkname lastmoduledatap runtime.lastmoduledatap
 var lastmoduledatap *moduledata // linker symbol
 
-//go:linkname modulesSlice runtime.modulesSlice
+////go:linkname modulesSlice runtime.modulesSlice
 var modulesSlice *[]*moduledata // see activeModules
 
 func FindFuncWithName(name string) (uintptr, error) {
@@ -175,25 +174,4 @@ type _func struct {
 	pcln      int32
 	npcdata   int32
 	nfuncdata int32
-}
-
-func GetFuncName(i interface{}, seps ...rune) string {
-	if i == nil {
-		return "nil"
-	}
-	// 获取函数名称
-	fn := runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
-	// 用 seps 进行分割
-	fields := strings.FieldsFunc(fn, func(sep rune) bool {
-		for _, s := range seps {
-			if sep == s {
-				return true
-			}
-		}
-		return false
-	})
-	if size := len(fields); size > 0 {
-		return fields[size-1]
-	}
-	return ""
 }
